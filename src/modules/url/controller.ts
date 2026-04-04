@@ -15,7 +15,7 @@ import {
 import {
   CreateShortUrlRequestDTO,
   CreateShortUrlResponseDTO,
-  UpdateUrlDTO,
+  UpdateUrlRequestDTO,
 } from './dto';
 import { UrlService } from './service';
 
@@ -66,7 +66,7 @@ export class UrlController {
   @Patch('urls/:shortCode')
   async update(
     @Param('shortCode') shortCode: string,
-    @Body() updateUrlDto: UpdateUrlDTO,
+    @Body() updateUrlDto: UpdateUrlRequestDTO,
   ) {
     return this.url.update(shortCode, updateUrlDto);
   }
@@ -74,6 +74,7 @@ export class UrlController {
   @Delete('urls/:shortCode')
   async remove(@Param('shortCode') shortCode: string) {
     await this.url.remove(shortCode);
+
     return { message: 'URL successfully deleted' };
   }
 

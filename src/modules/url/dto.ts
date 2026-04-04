@@ -41,7 +41,7 @@ export class CreateShortUrlResponseDTO {
   createdAt: string;
 }
 
-export class UpdateUrlDTO {
+export class UpdateUrlRequestDTO {
   @IsOptional()
   @IsUrl({}, { message: 'Please provide a valid URL' })
   @MaxLength(2048, { message: 'URL is too long' })

@@ -13,9 +13,14 @@ export type CreateShortUrlResponse = {
   shortUrl?: string;
 };
 
-export interface FindAllParams {
+export type IUpdateUrlRequest = {
+  originalUrl?: string;
+  shortCode?: string;
+};
+
+export type FindAllParams = {
   page: number;
   limit: number;
   sortBy: string;
   order: 'ASC' | 'DESC';
-}
+};

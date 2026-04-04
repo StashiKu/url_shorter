@@ -7,11 +7,11 @@ import {
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { UrlEntity } from './entity';
-import { UpdateUrlDTO } from './dto';
 import {
   CreateShortUrlRequest,
   CreateShortUrlResponse,
   FindAllParams,
+  IUpdateUrlRequest,
 } from './types';
 
 @Injectable()
@@ -63,7 +63,7 @@ export class UrlService {
 
   async update(
     shortCode: string,
-    updateUrlDto: UpdateUrlDTO,
+    updateUrlDto: IUpdateUrlRequest,
   ): Promise<UrlEntity> {
     const url = await this.findOne(shortCode);
 
