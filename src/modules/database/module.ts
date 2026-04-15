@@ -32,6 +32,13 @@ export const DATABASE_MODULE = TypeOrmModule.forRootAsync({
     idleTimeoutMillis: 10000,
     connectionTimeoutMillis: 2000,
     poolSize: config.get<number>(EnvironmentVariable.Db_pool_size),
+    cache: {
+      type: 'ioredis',
+      options: {
+        host: config.get('REDIS_HOST'),
+        port: config.get('REDIS_PORT'),
+      },
+    },
   }),
 });
 

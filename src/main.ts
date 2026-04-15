@@ -21,6 +21,3 @@ async function bootstrap() {
   await app.listen(3000);
 }
 bootstrap();
-
-// check how to implement graceful shutdown in nest
-// implement db module

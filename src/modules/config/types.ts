@@ -7,4 +7,6 @@ export type IConfigValidationSchema = {
   [EnvironmentVariable.Db_username]?: string;
   [EnvironmentVariable.Db_password]?: string;
   [EnvironmentVariable.Db_pool_size]?: number;
+  [EnvironmentVariable.Cache_host]: string;
+  [EnvironmentVariable.Cache_port]: number;
 };

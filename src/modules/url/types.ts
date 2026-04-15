@@ -1,16 +1,7 @@
-export type CreateShortUrlRequest = {
+export type ICreateShortUrlRequest = {
   originalUrl: string;
   customAlias?: string;
-};
-
-export type CreateShortUrlResponse = {
-  id: number;
-  clicks: number;
-  shortCode: string;
-  updatedAt: string;
-  createdAt: string;
-  originalUrl: string;
-  shortUrl?: string;
+  expiresAt?: string;
 };
 
 export type IUpdateUrlRequest = {
@@ -23,4 +14,14 @@ export type FindAllParams = {
   limit: number;
   sortBy: string;
   order: 'ASC' | 'DESC';
+};
+
+export type IShortUrl = {
+  id: number;
+  clicks: number;
+  shortCode: string;
+  updatedAt: string;
+  createdAt: string;
+  originalUrl: string;
+  shortUrl?: string;
 };

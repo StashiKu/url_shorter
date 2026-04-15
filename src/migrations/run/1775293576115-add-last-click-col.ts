@@ -26,7 +26,7 @@ export class AddLastClickCol1775293576115 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropIndex('urls', 'idx_urls_last_click_at');
-    await queryRunner.dropColumn('urls', 'last_click_at');
+    await queryRunner.dropIndex('url', 'idx_urls_last_click_at');
+    await queryRunner.dropColumn('url', 'last_click_at');
   }
 }

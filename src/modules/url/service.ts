@@ -5,23 +5,26 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { UrlEntity } from './entity';
 import {
-  CreateShortUrlRequest,
-  CreateShortUrlResponse,
+  IShortUrl,
   FindAllParams,
   IUpdateUrlRequest,
+  ICreateShortUrlRequest,
 } from './types';
+import { CacheService } from '../cache/service';
 
 @Injectable()
 export class UrlService {
   constructor(
     @InjectRepository(UrlEntity)
     private readonly repository: Repository<UrlEntity>,
+    private readonly cache: CacheService,
+    private readonly dataSource: DataSource,
   ) {}
 
-  convert(record: UrlEntity): CreateShortUrlResponse {
+  convert(record: UrlEntity): IShortUrl {
     return {
       ...record,
       createdAt: record.createdAt.toISOString(),
@@ -29,7 +32,7 @@ export class UrlService {
     };
   }
 
-  async create(body: CreateShortUrlRequest): Promise<CreateShortUrlResponse> {
+  async create(body: ICreateShortUrlRequest): Promise<IShortUrl> {
     const { originalUrl, customAlias } = body;
 
     if (!this.isValidUrl(originalUrl)) {
@@ -52,13 +55,19 @@ export class UrlService {
       shortCode,
       clicks: 0,
     });
-
     const savedUrl = await this.repository.save(url);
-
-    return {
+    const result = {
       ...this.convert(savedUrl),
-      shortUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/${savedUrl.shortCode}`,
+      shortUrl: this.shortenUrl(savedUrl.shortCode),
     };
+
+    await this.cache.set(shortCode, JSON.stringify({ result }));
+
+    return result;
+  }
+
+  shortenUrl(shortCode: string): string {
+    return `${process.env.BASE_URL || 'http://localhost:3000'}/${shortCode}`;
   }
 
   async update(
@@ -135,14 +144,17 @@ export class UrlService {
   }
 
   async findByShortCode(shortCode: string): Promise<UrlEntity | null> {
-    return this.repository.findOne({
-      where: { shortCode },
-    });
-  }
+    let url = await this.cache.get<UrlEntity>(shortCode);
 
-  async incrementClicks(shortCode: string): Promise<void> {
-    await this.repository.increment({ shortCode }, 'clicks', 1);
-    await this.repository.update({ shortCode }, { lastClickAt: new Date() });
+    if (!url) {
+      url = await this.repository.findOne({
+        where: { shortCode },
+      });
+
+      await this.cache.set(shortCode, JSON.stringify(url));
+    }
+
+    return url;
   }
 
   async findOne(shortCode: string): Promise<UrlEntity> {
@@ -152,6 +164,10 @@ export class UrlService {
       throw new NotFoundException(
         `URL with short code "${shortCode}" not found`,
       );
+    }
+
+    if (typeof url === 'string') {
+      return JSON.parse(url);
     }
 
     return url;
@@ -203,6 +219,21 @@ export class UrlService {
     }
 
     return shortCode;
+  }
+
+  async bulkIncrementClicks(clicksMap: Map<string, number>): Promise<void> {
+    if (clicksMap.size === 0) return;
+
+    await this.dataSource.transaction(async (transactionalEntityManager) => {
+      for (const [shortCode, increment] of clicksMap) {
+        await transactionalEntityManager
+          .createQueryBuilder()
+          .update(UrlEntity)
+          .set({ clicks: () => `clicks + ${increment}` })
+          .where('shortCode = :shortCode', { shortCode })
+          .execute();
+      }
+    });
   }
 
   private isValidUrl(url: string): boolean {
