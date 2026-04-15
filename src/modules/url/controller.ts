@@ -18,10 +18,14 @@ import {
   UpdateUrlRequestDTO,
 } from './dto';
 import { UrlService } from './service';
+import { ClickBufferService } from '../click-buffer/service';
 
 @Controller('shorten')
 export class UrlController {
-  constructor(private readonly url: UrlService) {}
+  constructor(
+    private readonly url: UrlService,
+    private readonly click_buffer: ClickBufferService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.OK)
@@ -42,12 +46,12 @@ export class UrlController {
       throw new NotFoundException('URL not found');
     }
 
-    this.url.incrementClicks(shortCode).catch(console.error);
+    await this.click_buffer.addClick(shortCode);
 
     return { url: url.originalUrl, statusCode: 302 };
   }
 
-  @Get('urls/:shortCode')
+  @Get('url/:shortCode')
   async findOne(@Param('shortCode') shortCode: string) {
     const url = await this.url.findByShortCode(shortCode);
 
@@ -58,12 +62,12 @@ export class UrlController {
     return url;
   }
 
-  @Get('urls/:shortCode/stats')
+  @Get('url/:shortCode/stats')
   async getStats(@Param('shortCode') shortCode: string) {
     return this.url.getStats(shortCode);
   }
 
-  @Patch('urls/:shortCode')
+  @Patch('url/:shortCode')
   async update(
     @Param('shortCode') shortCode: string,
     @Body() updateUrlDto: UpdateUrlRequestDTO,
@@ -71,14 +75,14 @@ export class UrlController {
     return this.url.update(shortCode, updateUrlDto);
   }
 
-  @Delete('urls/:shortCode')
+  @Delete('url/:shortCode')
   async remove(@Param('shortCode') shortCode: string) {
     await this.url.remove(shortCode);
 
     return { message: 'URL successfully deleted' };
   }
 
-  @Get('urls')
+  @Get('url')
   async findAll(
     @Query('page') page = 1,
     @Query('limit') limit = 10,

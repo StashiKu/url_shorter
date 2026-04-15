@@ -6,7 +6,7 @@ import {
   Index,
 } from 'typeorm';
 
-@Entity('urls')
+@Entity('url')
 export class UrlEntity {
   @PrimaryGeneratedColumn()
   id: number;

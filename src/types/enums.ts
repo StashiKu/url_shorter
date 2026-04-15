@@ -7,4 +7,6 @@ export enum EnvironmentVariable {
   Db_name = 'DB_NAME',
   Db_host = 'DB_HOST',
   Db_pool_size = 'DB_POOL_SIZE',
+  Cache_host = 'CACHE_HOST',
+  Cache_port = 'CACHE_PORT',
 }
