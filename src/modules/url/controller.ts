@@ -40,15 +40,24 @@ export class UrlController {
   @Get(':shortCode')
   @Redirect()
   async redirect(@Param('shortCode') shortCode: string) {
-    const url = await this.url.findByShortCode(shortCode);
+    try {
+      const originalUrl = await this.url.getOriginalUrl(shortCode);
 
-    if (!url) {
-      throw new NotFoundException('URL not found');
+      if (!originalUrl) {
+        throw new NotFoundException('URL not found');
+      }
+
+      await this.click_buffer.addClick(shortCode);
+
+      if (Math.random() < 0.1) {
+        await this.click_buffer.scheduleFlush();
+      }
+
+      return { url: originalUrl };
+    } catch (error) {
+      // TODO: how to improve
+      throw error;
     }
-
-    await this.click_buffer.addClick(shortCode);
-
-    return { url: url.originalUrl, statusCode: 302 };
   }
 
   @Get('url/:shortCode')

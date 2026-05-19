@@ -9,4 +9,8 @@ export type IConfigValidationSchema = {
   [EnvironmentVariable.Db_pool_size]?: number;
   [EnvironmentVariable.Cache_host]: string;
   [EnvironmentVariable.Cache_port]: number;
+  [EnvironmentVariable.Cache_ttl]: number;
+  [EnvironmentVariable.Queue_name]: string;
+  [EnvironmentVariable.Queue_max_buffer_size]: number;
+  [EnvironmentVariable.Queue_flush_delay]: number;
 };

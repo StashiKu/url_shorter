@@ -1,49 +1,89 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { ClickBufferService } from '~/modules/click-buffer/service';
+import { Job } from 'bullmq';
+import { Logger } from '@nestjs/common';
 import { UrlService } from '~/modules/url';
+import { ClickBufferService } from '~/modules/click-buffer/service';
+import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 
-@Injectable()
-export class FlushClicksWorker {
+@Processor('flush', {
+  concurrency: 1,
+  limiter: {
+    max: 1,
+    duration: 1000,
+  },
+})
+export class FlushClicksWorker extends WorkerHost {
   private readonly logger = new Logger(FlushClicksWorker.name);
-  private isFlushing = false;
+  private readonly BATCH_SIZE = 1000;
 
   constructor(
     private readonly click_buffer: ClickBufferService,
     private readonly url: UrlService,
-  ) {}
+  ) {
+    super();
+  }
 
-  @Cron(CronExpression.EVERY_30_SECONDS)
-  async flush() {
-    this.logger.log('Cron job is runnning');
+  async process(job: Job<any, any, string>): Promise<any> {
+    this.logger.log(`Processing flush job ${job.id}`);
 
-    if (this.isFlushing) {
-      this.logger.warn('Prev flush still in progress...');
+    const clicksMap = await this.click_buffer.flushAndGet();
 
-      return;
+    if (clicksMap.size === 0) {
+      this.logger.log('No clicks to flush');
+      return { processed: 0 };
     }
 
-    this.isFlushing = true;
+    this.logger.log(`Flushing ${clicksMap.size} unique short codes`);
 
-    try {
-      const clicksMap = await this.click_buffer.flushAndGet();
+    const entries = Array.from(clicksMap.entries());
 
-      if (clicksMap.size === 0) return;
+    for (let i = 0; i < entries.length; i += this.BATCH_SIZE) {
+      const batch = entries.slice(i, i + this.BATCH_SIZE);
+      const batchMap = new Map(batch);
 
-      this.logger.log(`Flushing ${clicksMap.size} unique short codes`);
+      await this.url.bulkIncrementClicks(batchMap);
 
-      await this.url.bulkIncrementClicks(clicksMap);
-
-      const tatalClicks = Array.from(clicksMap.values()).reduce(
+      const batchTotal = Array.from(batchMap.values()).reduce(
         (sum, val) => sum + val,
         0,
       );
 
-      this.logger.log(`Successfully flushed ${tatalClicks} clicks`);
-    } catch (error) {
-      this.logger.error('Failed to flush clicks', error);
-    } finally {
-      this.isFlushing = false;
+      this.logger.log(
+        `Processed batch ${i / this.BATCH_SIZE + 1}: ${batchTotal} clicks`,
+      );
     }
+
+    const totalClicks = Array.from(clicksMap.values()).reduce(
+      (sum, val) => sum + val,
+      0,
+    );
+
+    this.logger.log(`Successfully flushed ${totalClicks} clicks`);
+
+    return {
+      processed: totalClicks,
+      uniqueCodes: clicksMap.size,
+    };
+  }
+
+  @OnWorkerEvent('active')
+  onActive(job: Job) {
+    this.logger.log(`Job ${job.id} is now active`);
+  }
+
+  @OnWorkerEvent('completed')
+  onCompleted(job: Job, result: any) {
+    this.logger.log(
+      `Job ${job.id} completed: ${result.processed} clicks flushed`,
+    );
+  }
+
+  @OnWorkerEvent('failed')
+  onFailed(job: Job, error: Error) {
+    this.logger.error(`Job ${job.id} failed: ${error.message}`, error.stack);
+  }
+
+  @OnWorkerEvent('error')
+  onError(error: Error) {
+    this.logger.error(`Worker error: ${error.message}`, error.stack);
   }
 }
