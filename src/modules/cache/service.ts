@@ -1,16 +1,19 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { EnvironmentVariable } from '~/types/enums';
 
 @Injectable()
 export class CacheService implements OnModuleDestroy {
   public readonly client: Redis;
+  private readonly ttl: number;
 
   constructor(private configService: ConfigService) {
     this.client = new Redis({
-      host: this.configService.get('CACHE_HOST'),
-      port: this.configService.get('CACHE_PORT'),
+      host: this.configService.get(EnvironmentVariable.Cache_host),
+      port: this.configService.get(EnvironmentVariable.Cache_port),
     });
+    this.ttl = this.configService.get(EnvironmentVariable.Cache_ttl);
   }
 
   async onModuleDestroy() {
@@ -23,7 +26,7 @@ export class CacheService implements OnModuleDestroy {
     return JSON.parse(res);
   }
 
-  async set(key: string, value: any, ttl = 5000): Promise<void> {
+  async set(key: string, value: any, ttl = this.ttl): Promise<void> {
     await this.client.setex(key, ttl, JSON.stringify(value));
   }
 

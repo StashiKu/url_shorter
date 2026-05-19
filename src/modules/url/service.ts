@@ -61,7 +61,7 @@ export class UrlService {
       shortUrl: this.shortenUrl(savedUrl.shortCode),
     };
 
-    await this.cache.set(shortCode, JSON.stringify({ result }));
+    await this.cache.set(shortCode, result);
 
     return result;
   }
@@ -151,7 +151,7 @@ export class UrlService {
         where: { shortCode },
       });
 
-      await this.cache.set(shortCode, JSON.stringify(url));
+      await this.cache.set(shortCode, url);
     }
 
     return url;
@@ -171,6 +171,12 @@ export class UrlService {
     }
 
     return url;
+  }
+
+  async getOriginalUrl(shortCode: string): Promise<string> {
+    const { originalUrl } = await this.findByShortCode(shortCode);
+
+    return originalUrl;
   }
 
   async getStats(shortCode: string): Promise<any> {

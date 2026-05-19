@@ -35,8 +35,8 @@ export const DATABASE_MODULE = TypeOrmModule.forRootAsync({
     cache: {
       type: 'ioredis',
       options: {
-        host: config.get('REDIS_HOST'),
-        port: config.get('REDIS_PORT'),
+        host: config.get(EnvironmentVariable.Cache_host),
+        port: config.get(EnvironmentVariable.Cache_port),
       },
     },
   }),
